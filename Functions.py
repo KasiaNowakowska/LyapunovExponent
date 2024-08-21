@@ -322,6 +322,51 @@ def lyap(ts, J, m, t_end, time_steps):
       
     return time_innovation, mean_log_distance, distance_log_i
 
+def lyap_no_embedding(X, J, t_end, time_steps):
+    """
+    Calculates the (average) largest lyapunov exponent using Rosenstein's Algorithm.
+    
+    Parameters:
+    ts (array): Time series.
+    J (int): Lag.
+    t_end (int): The number of time steps to project into the future.
+    time_steps (int): Specifies the range in time to look for a nearest neighbour (has to be large enough to find a 
+                                                                                   nearest neighbour thats close, but 
+                                                                                   means we don't need 
+                                                                                   to search through all the points)
+    
+    Returns:
+    time_innovation (array): array of the timesteps into the future (len: t_end)
+    mean_log_distance (array): the mean log distance across all xi (len: t_end)
+    distance_log_i (array): the log distance for each xi 
+    """
+    if time_steps < t_end:
+        print("x is not greater than y. Stopping function.")
+        return
+    N = X.shape[0]
+    m = X.shape[1]
+    M = N - (m - 1) * J
+    print('J:', J, 'm:', m, 'N:', N, 'M:', M)
+      
+    #X = np.full((M,m), np.nan)
+    X = X[:M:J, :]
+      
+    j = get_nearest_neighbours(X, mu=mean_period(X[:,0]), time_steps=time_steps)
+      
+    #### estimate mean rate of seperation of nearest neighbours ####
+    def expected_log_distance(i, X):
+        n = len(X)
+        d_ji = np.array([distance(X[j[k] + i], X[k + i]) for k in range(1, n - i)])
+        log_only = np.log(d_ji)
+        mean = np.mean(np.log(d_ji))
+        return mean, log_only
+      
+    mean_log_distance = [expected_log_distance(i, X)[0] for i in range(t_end + 1)]
+    distance_log_i = [expected_log_distance(i, X)[1] for i in range(t_end + 1)]
+    time_innovation = np.arange(t_end + 1)
+      
+    return time_innovation, mean_log_distance, distance_log_i
+
 def J_from_autocorrelation(ts):
     """
     Calculates the lag J to use in Rosenstein's Algorithm.
