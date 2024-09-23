@@ -293,7 +293,10 @@ def lyap(ts, J, m, t_end, time_steps):
     distance_log_i (array): the log distance for each xi 
     """
     if time_steps < t_end:
-        print("x is not greater than y. Stopping function.")
+        print("Number of time steps to find nearest neighbout (time_steps) has to be greater than t_end. Stopping function.")
+         return
+    if time_steps > len(ts):
+        print("Number of time steps to find nearest neighbout (time_steps) cannot exceed the length of the data ts. Stopping function.")
         return
     N = len(ts)
     M = N - (m - 1) * J
