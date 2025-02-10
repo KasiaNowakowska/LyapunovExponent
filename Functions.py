@@ -294,7 +294,7 @@ def lyap(ts, J, m, t_end, time_steps):
     """
     if time_steps < t_end:
         print("Number of time steps to find nearest neighbout (time_steps) has to be greater than t_end. Stopping function.")
-         return
+        return
     if time_steps > len(ts):
         print("Number of time steps to find nearest neighbout (time_steps) cannot exceed the length of the data ts. Stopping function.")
         return

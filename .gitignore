@@ -1,1 +1,4 @@
 RBexample.py
+*.o*
+data
+*.sh
