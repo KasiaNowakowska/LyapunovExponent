@@ -2,3 +2,4 @@ RBexample.py
 *.o*
 data
 *.sh
+__pycache__
