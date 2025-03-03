@@ -31,34 +31,38 @@ input_path = args['--input_path']
 output_path = args['--output_path']
 
 #### Load Data ####
-modes = np.load(input_path+'/Ra2e8_c10_data_reduced.npy')
+modes = np.load(input_path+'/Ra2e8_c100_data_reduced.npy')
 print(np.shape(modes))
 dt = 2
 time_vals = np.linspace(0, modes.shape[0]*dt, modes.shape[0])
 print(len(time_vals))
 print(time_vals[0], time_vals[1])
 
-modes_to_plot = np.array([1, 2, 5, 10]) -1
+modes_to_plot = np.array([1, 2, 10, 50, 100]) -1
 fig, ax =plt.subplots(len(modes_to_plot), figsize=(12, 3*len(modes_to_plot)), tight_layout=True, sharex=True)
 if len(modes_to_plot) == 1:
-    for index, element in modes_to_plot:
+    for index, element in enumerate(modes_to_plot):
         ax.plot(time_vals, modes[:, element])
         ax.set_xlabel('time')
-        ax.set_ylabel(f'mode {i}')
+        ax.set_ylabel(f'mode {element+1}')
         ax.grid()
 else:
-    for index, element in modes_to_plot:
+    for index, element in enumerate(modes_to_plot):
         ax[index].plot(time_vals, modes[:, element])
-        ax[index].set_ylabel(f'mode {i}')
+        ax[index].set_ylabel(f'mode {element+1}')
         ax[index].grid()
     ax[-1].set_xlabel('time')
 fig.savefig(output_path+'/modes.png')
 
-'''
-# Print the shape of the combined array
-print(data.shape)
+index_mode = 0
+element_mode = index_mode+1
 
-x_obs = q[:5000]
+output_path = output_path + f"/mode_{element_mode}"
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
+    print('made directory')
+
+x_obs = modes[:, index_mode]
 print(np.shape(x_obs))
 
 fig, ax = plt.subplots(1, figsize=(12,3), constrained_layout=True)
@@ -69,14 +73,14 @@ ax.grid()
 fig.savefig(output_path+'/data.png')
 plt.close()
 
-max_m = 16
+max_m = 10
 derv_threshold = 0.005
 
 # Full path for saving the file
 output_file = "parameters.txt"
 
 output_path_par = os.path.join(output_path, output_file)
-
+'''
 # New parameters to add
 new_params = f"derv_threshold: {derv_threshold:.4f}\n"
 
@@ -142,6 +146,7 @@ np.save(output_path+'/E1.npy', E1)
 np.save(output_path+'/E2.npy', E2)
 np.save(output_path+'/tau.npy', tau)
 
+
 E1 = np.load(output_path+'/E1.npy')
 E2 = np.load(output_path+'/E2.npy')
 m_values = np.arange(1,max_m+1)
@@ -159,14 +164,14 @@ ax.legend()
 ax.set_xlabel('m')
 ax.set_ylabel('dE1')
 fig.savefig(output_path+'/dE1.png')
-
+'''
 ### PART 2 after calculating m values###
 optimal_m = np.load(output_path+'/optimal_m.npy')
-dt = total_time[1] - total_time[0]
+dt = time_vals[1] - time_vals[0]
 print('m=', optimal_m)
 
 
-t_end = 2000
+t_end = 500
 
 #%% Rosenstein's Algorithm for LLE
 J_value = Fn.J_from_autocorrelation(x_obs)
@@ -199,17 +204,17 @@ fig.savefig(output_path+'/LLE_plot_no_lobf.png')
 np.save(output_path+'/time_innovation.npy', time_innovation)
 np.save(output_path+'/LLE_curve.npy', mean_log_distance)
 
-
+'''
 #### PART 3
 optimal_m = np.load(output_path+'/optimal_m.npy')
-dt = total_time[1] - total_time[0]
+dt = time_vals[1] - time_vals[0]
 print('m=', optimal_m)
 time_innovation = np.load(output_path+'/time_innovation.npy')
 curve          = np.load(output_path+'/LLE_curve.npy')
 time_values     = time_innovation*dt
 t_end = 2000
-'''
-'''
+
+
 ### removed this part and done by eye '####
 dcurve = np.diff(curve)
 print(np.shape(dcurve))
@@ -238,8 +243,8 @@ ax.legend()
 ax.set_xlabel('Time  $(i\Delta t)$')
 ax.set_ylabel('d(ln $\hat{d}$)')
 fig.savefig(output_path+'/d_curve.png')
-'''
-'''
+
+
 stable_time = 750
 slope_start = int(0)
 slope_end =int(stable_time//dt)
