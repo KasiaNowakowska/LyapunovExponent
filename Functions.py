@@ -11,7 +11,7 @@ import h5py
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
-import pandas as pd
+#import pandas as pd
 from scipy.signal import periodogram
 
 # %% AMI

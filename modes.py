@@ -1,11 +1,12 @@
 """
 python script for ESN grid search.
 
-Usage: lyapunov.py [--input_path=<input_path> --output_path=<output_path>]
+Usage: lyapunov.py [--input_path=<input_path> --output_path=<output_path> --index_mode=<index_mode>]
 
 Options:
     --input_path=<input_path>          file path to use for data
     --output_path=<output_path>        file path to save images output [default: ./images]
+    --index_mode=<index_mode>          mode to run lyapunov time code on
 """
 
 # import packages
@@ -31,6 +32,7 @@ input_path = args['--input_path']
 output_path = args['--output_path']
 
 #### Load Data ####
+no_modes = 100
 modes = np.load(input_path+'/Ra2e8_c100_data_reduced.npy')
 print(np.shape(modes))
 dt = 2
@@ -38,7 +40,12 @@ time_vals = np.linspace(0, modes.shape[0]*dt, modes.shape[0])
 print(len(time_vals))
 print(time_vals[0], time_vals[1])
 
-modes_to_plot = np.array([1, 2, 10, 50, 100]) -1
+output_path = output_path+f"/modes_{no_modes}"
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
+    print('made directory')
+
+modes_to_plot = np.array([1, 2, 10, 50, 100]) - 1
 fig, ax =plt.subplots(len(modes_to_plot), figsize=(12, 3*len(modes_to_plot)), tight_layout=True, sharex=True)
 if len(modes_to_plot) == 1:
     for index, element in enumerate(modes_to_plot):
@@ -54,7 +61,7 @@ else:
     ax[-1].set_xlabel('time')
 fig.savefig(output_path+'/modes.png')
 
-index_mode = 0
+index_mode = int(args['--index_mode'])
 element_mode = index_mode+1
 
 output_path = output_path + f"/mode_{element_mode}"
@@ -73,14 +80,16 @@ ax.grid()
 fig.savefig(output_path+'/data.png')
 plt.close()
 
-max_m = 10
+max_m = 15
 derv_threshold = 0.005
 
 # Full path for saving the file
 output_file = "parameters.txt"
 
 output_path_par = os.path.join(output_path, output_file)
+
 '''
+#### PART 1 ####
 # New parameters to add
 new_params = f"derv_threshold: {derv_threshold:.4f}\n"
 
@@ -164,7 +173,8 @@ ax.legend()
 ax.set_xlabel('m')
 ax.set_ylabel('dE1')
 fig.savefig(output_path+'/dE1.png')
-'''
+
+
 ### PART 2 after calculating m values###
 optimal_m = np.load(output_path+'/optimal_m.npy')
 dt = time_vals[1] - time_vals[0]
@@ -205,6 +215,7 @@ np.save(output_path+'/time_innovation.npy', time_innovation)
 np.save(output_path+'/LLE_curve.npy', mean_log_distance)
 
 '''
+
 #### PART 3
 optimal_m = np.load(output_path+'/optimal_m.npy')
 dt = time_vals[1] - time_vals[0]
@@ -215,43 +226,44 @@ time_values     = time_innovation*dt
 t_end = 2000
 
 
-### removed this part and done by eye '####
-dcurve = np.diff(curve)
-print(np.shape(dcurve))
-derv_threshold_curve = 0.02
-stable_points = np.where(np.abs(dcurve) < derv_threshold_curve)[0]
-print(stable_points)
-Flag  = True
-v = 0
-while Flag == True:
-    stable_index = stable_points[v]
-    print(stable_index)
-    if np.all(np.abs(dcurve[stable_index:stable_index+20]) < derv_threshold_curve):
-        stable_point = stable_index
-        Flag = False
-    else:
-        v += 1
+# ### removed this part and done by eye '####
+# dcurve = np.diff(curve)
+# print(np.shape(dcurve))
+# derv_threshold_curve = 0.02
+# stable_points = np.where(np.abs(dcurve) < derv_threshold_curve)[0]
+# print(stable_points)
+# Flag  = True
+# v = 0
+# while Flag == True:
+#     stable_index = stable_points[v]
+#     print(stable_index)
+#     if np.all(np.abs(dcurve[stable_index:stable_index+20]) < derv_threshold_curve):
+#         stable_point = stable_index
+#         Flag = False
+#     else:
+#         v += 1
         
-stable_time = time_values[stable_point] 
-print(stable_time)
-stable_times[i] = stable_time
-fig, ax = plt.subplots(1, figsize=(12,6), tight_layout=True)
-ax.plot(time_values[1:], dcurve, label='dcurve', marker='o')
-ax.axvline(stable_time, color='r', linestyle='--')
-ax.grid()
-ax.legend()
-ax.set_xlabel('Time  $(i\Delta t)$')
-ax.set_ylabel('d(ln $\hat{d}$)')
-fig.savefig(output_path+'/d_curve.png')
+# stable_time = time_values[stable_point] 
+# print(stable_time)
+# stable_times[i] = stable_time
+# fig, ax = plt.subplots(1, figsize=(12,6), tight_layout=True)
+# ax.plot(time_values[1:], dcurve, label='dcurve', marker='o')
+# ax.axvline(stable_time, color='r', linestyle='--')
+# ax.grid()
+# ax.legend()
+# ax.set_xlabel('Time  $(i\Delta t)$')
+# ax.set_ylabel('d(ln $\hat{d}$)')
+# fig.savefig(output_path+'/d_curve.png')
 
 
-stable_time = 750
+stable_time = 30
 slope_start = int(0)
 slope_end =int(stable_time//dt)
 slope, intercept, r_value, p_value, std_err = linregress(time_values[slope_start:slope_end], curve[slope_start:slope_end])
 print(slope)
 
 end_val = int(stable_time//dt)
+t_end_val = 200
 best_fit = slope*time_values[:end_val] + intercept
 fig, ax = plt.subplots(1,figsize=(8,6), tight_layout=True)
 ax.plot(time_values[:], curve[:], 'b-', label='mean log distance')
@@ -264,6 +276,7 @@ ax.tick_params(axis='x', labelsize=14)
 ax.tick_params(axis='y', labelsize=14)
 #plt.title('Mean Log Distance over Time')
 ax.legend(fontsize=16)
+ax.set_xlim(-20, t_end_val)
 fig.savefig(output_path+'/LLE_mean_plot_lobf.png')
 
 print('LLE =', slope)
@@ -277,5 +290,3 @@ new_params = f"stable_time: {stable_time:.2f}\n LLE: {slope:.6f}\n LT: {(1/slope
 # Append new parameters to the file
 with open(output_path_par, "a") as file:
     file.write(new_params)
-
-'''
