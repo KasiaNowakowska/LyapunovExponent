@@ -211,53 +211,6 @@ def distance(xe, xi):
     """
     return np.sqrt(np.sum((xi - xe)**2))
 
-def get_nearest_neighbour(xi, X, mu, time_steps):
-    """
-    Calculates the nearest neighbour of xi.
-    
-    Parameters:
-    xi (array-like): The vector representing a position in reconstructed phase space.
-    X (matrix): The matrix of reconstructed phase space vectors with embedding dimension m
-    mu (float): The time period for which to not take a nearest neighbour (so they are not too close in time)
-    time_steps (int): Specifies the range in time to look for a nearest neighbour (has to be large enough to find a 
-                                                                                   nearest neighbour thats close, but 
-                                                                                   means we don't need 
-                                                                                   to search through all the points)
-    
-    Returns:
-    float: the index representing the nearest neighbour to xi 
-    """
-    #print(X[xi])
-    xes = np.arange(len(X) - time_steps)  # Indices for potential nearest neighbors within a specified range
-    #print('xes', xes)
-    # Calculate distances to potential neighbors
-    ds = np.array([distance(X[xe], X[xi]) for xe in xes])
-    #print(xi, 'ds=', ds)
-    #print(len(ds))
-    # Set distance to infinity if it's the same vector or too close based on muu
-    ds = np.where(ds == 0, np.inf, ds)
-    ds = np.where(np.abs(xi - xes) < mu, np.inf, ds)
-    #print(xi, np.argmin(ds))
-    return np.argmin(ds)
-
-def get_nearest_neighbours(X, mu, time_steps):
-    """
-    Calculates the nearest neighbour of for all xi in X.
-    
-    Parameters:
-    X (matrix): The matrix of reconstructed phase space vectors with embedding dimension m
-    mu (float): The time period for which to not take a nearest neighbour (so they are not too close in time)
-    time_steps (int): Specifies the range in time to look for a nearest neighbour (has to be large enough to find a 
-                                                                                   nearest neighbour thats close, but 
-                                                                                   means we don't need 
-                                                                                   to search through all the points)
-    
-    Returns:
-    array: an array of all the indicies representing the nearest neighbour to xi 
-    """
-    gnn = [get_nearest_neighbour(i, X, mu, time_steps) for i in range(len(X))]
-    return gnn
-
 def mean_period(ts):
     """
     Calculates the mean period of the timeseries.
@@ -273,102 +226,6 @@ def mean_period(ts):
     mean_frequency = np.sum(freq * w)
     return 1 / mean_frequency
 
-def lyap(ts, J, m, t_end, time_steps):
-    """
-    Calculates the (average) largest lyapunov exponent using Rosenstein's Algorithm.
-    
-    Parameters:
-    ts (array): Time series.
-    J (int): Lag.
-    m (int): embedding dimension.
-    t_end (int): The number of time steps to project into the future.
-    time_steps (int): Specifies the range in time to look for a nearest neighbour (has to be large enough to find a 
-                                                                                   nearest neighbour thats close, but 
-                                                                                   means we don't need 
-                                                                                   to search through all the points)
-    
-    Returns:
-    time_innovation (array): array of the timesteps into the future (len: t_end)
-    mean_log_distance (array): the mean log distance across all xi (len: t_end)
-    distance_log_i (array): the log distance for each xi 
-    """
-    if time_steps < t_end:
-        print("Number of time steps to find nearest neighbout (time_steps) has to be greater than t_end. Stopping function.")
-        return
-    if time_steps > len(ts):
-        print("Number of time steps to find nearest neighbout (time_steps) cannot exceed the length of the data ts. Stopping function.")
-        return
-    N = len(ts)
-    M = N - (m - 1) * J
-    print('J:', J, 'm:', m, 'N:', N, 'M:', M)
-      
-    X = np.full((M,m), np.nan)
-      
-    # Populate matrix X based on the loop logic
-    for i in range(M):
-        idx = np.arange(i, i + (m - 1) * J + 1, J)
-        X[i, :] = ts[idx]
-      
-    j = get_nearest_neighbours(X, mu=mean_period(ts), time_steps=time_steps)
-      
-    #### estimate mean rate of seperation of nearest neighbours ####
-    def expected_log_distance(i, X):
-        n = len(X)
-        d_ji = np.array([distance(X[j[k] + i], X[k + i]) for k in range(1, n - i)])
-        log_only = np.log(d_ji)
-        mean = np.mean(np.log(d_ji))
-        return mean, log_only
-      
-    mean_log_distance = [expected_log_distance(i, X)[0] for i in range(t_end + 1)]
-    distance_log_i = [expected_log_distance(i, X)[1] for i in range(t_end + 1)]
-    time_innovation = np.arange(t_end + 1)
-      
-    return time_innovation, mean_log_distance, distance_log_i
-
-def lyap_no_embedding(X, J, t_end, time_steps):
-    """
-    Calculates the (average) largest lyapunov exponent using Rosenstein's Algorithm.
-    
-    Parameters:
-    ts (array): Time series.
-    J (int): Lag.
-    t_end (int): The number of time steps to project into the future.
-    time_steps (int): Specifies the range in time to look for a nearest neighbour (has to be large enough to find a 
-                                                                                   nearest neighbour thats close, but 
-                                                                                   means we don't need 
-                                                                                   to search through all the points)
-    
-    Returns:
-    time_innovation (array): array of the timesteps into the future (len: t_end)
-    mean_log_distance (array): the mean log distance across all xi (len: t_end)
-    distance_log_i (array): the log distance for each xi 
-    """
-    if time_steps < t_end:
-        print("x is not greater than y. Stopping function.")
-        return
-    N = X.shape[0]
-    m = X.shape[1]
-    M = N - (m - 1) * J
-    print('J:', J, 'm:', m, 'N:', N, 'M:', M)
-      
-    #X = np.full((M,m), np.nan)
-    X = X[:M:J, :]
-      
-    j = get_nearest_neighbours(X, mu=mean_period(X[:,0]), time_steps=time_steps)
-      
-    #### estimate mean rate of seperation of nearest neighbours ####
-    def expected_log_distance(i, X):
-        n = len(X)
-        d_ji = np.array([distance(X[j[k] + i], X[k + i]) for k in range(1, n - i)])
-        log_only = np.log(d_ji)
-        mean = np.mean(np.log(d_ji))
-        return mean, log_only
-      
-    mean_log_distance = [expected_log_distance(i, X)[0] for i in range(t_end + 1)]
-    distance_log_i = [expected_log_distance(i, X)[1] for i in range(t_end + 1)]
-    time_innovation = np.arange(t_end + 1)
-      
-    return time_innovation, mean_log_distance, distance_log_i
 
 def J_from_autocorrelation(ts):
     """
@@ -391,3 +248,92 @@ def J_from_autocorrelation(ts):
     # Find the first lag where autocorrelation drops below the threshold
     J_value = np.where(autocorr < threshold)[0][0]
     return J_value
+
+def get_nearest_neighbour(xi, X, mu):
+    """
+    Calculates the nearest neighbour of xi.
+    
+    Parameters:
+    xi (array-like): The vector representing a position in reconstructed phase space.
+    X (matrix): The matrix of reconstructed phase space vectors with embedding dimension m
+    mu (float): The time period for which to not take a nearest neighbour (so they are not too close in time)
+    
+    Returns:
+    float: the index representing the nearest neighbour to xi 
+    """
+    #print(X[xi])
+    xes = np.arange(len(X))  # Indices for potential nearest neighbors within a specified range
+    #print('xes', xes)
+    # Calculate distances to potential neighbors
+    ds = np.array([distance(X[xe], X[xi]) for xe in xes])
+    #print(xi, 'ds=', ds)
+    #print(len(ds))
+    # Set distance to infinity if it's the same vector or too close based on muu
+    ds = np.where(ds == 0, np.inf, ds)
+    ds = np.where(np.abs(xi - xes) < mu, np.inf, ds)
+    #print(xi, np.argmin(ds))
+    return np.argmin(ds)
+
+def get_nearest_neighbours(X, mu):
+    """
+    Calculates the nearest neighbour of for all xi in X.
+    
+    Parameters:
+    X (matrix): The matrix of reconstructed phase space vectors with embedding dimension m
+    mu (float): The time period for which to not take a nearest neighbour (so they are not too close in time)
+    
+    Returns:
+    array: an array of all the indicies representing the nearest neighbour to xi 
+    """
+    gnn = [get_nearest_neighbour(i, X, mu) for i in range(len(X))]
+    return gnn
+
+def lyap(ts, J, m, t_end):
+    """
+    Calculates the (average) largest Lyapunov exponent using Rosenstein's Algorithm.
+
+    Parameters:
+    ts (array): Time series.
+    J (int): Lag.
+    m (int): Embedding dimension.
+    t_end (int): Number of time steps to project into the future.
+
+    Returns:
+    time_innovation (array): timesteps into the future (len: t_end)
+    mean_log_distance (array): mean log distance across all Xi
+    distance_log_i (array): log distances for each Xi
+    """
+    N = len(ts)
+    M = N - (m - 1) * J
+    print(f'J: {J}, m: {m}, N: {N}, M: {M}')
+
+    # Construct reconstructed phase space
+    X = np.full((M, m), np.nan)
+    for i in range(M):
+        idx = np.arange(i, i + (m - 1) * J + 1, J)
+        X[i, :] = ts[idx]
+
+    # Find nearest neighbours (excluding temporal neighbors)
+    print('finding nearest neighbours...')
+    j = get_nearest_neighbours(X, mu=mean_period(ts))
+
+    # Only keep indices where both Xi and its neighbour can be projected t_end steps ahead
+    valid_indices = [i for i in range(M) if i + t_end < M and j[i] + t_end < M]
+    num_valid = len(valid_indices)
+
+    # Initialize array to store log distances for all i and future timesteps
+    distance_log_i = np.zeros((num_valid, t_end + 1))
+
+    print('computing distances through time')
+    # Compute log distances for each valid pair
+    for idx, i in enumerate(valid_indices):
+        distances = np.array([distance(X[i + k], X[j[i] + k]) for k in range(t_end + 1)])
+        distance_log_i[idx, :] = np.log(distances)
+
+    # Compute mean log-distance across all i at each future timestep
+    mean_log_distance = np.mean(distance_log_i, axis=0)
+
+    # Time axis
+    time_innovation = np.arange(t_end + 1)
+
+    return time_innovation, mean_log_distance, distance_log_i

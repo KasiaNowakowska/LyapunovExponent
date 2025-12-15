@@ -3,3 +3,4 @@ RBexample.py
 data
 *.sh
 __pycache__
+LorenzExample.py
