@@ -12,4 +12,4 @@ Practical method for determining the minimum embedding dimension of a scalar tim
 Physica D: Nonlinear Phenomena,
 https://doi.org/10.1016/S0167-2789(97)00118-8.
 
-Run LorenzExample.py for finding min embedding dimension and LLE for Lorenz model.
+Run LorenzLyapunovExpenent.ipynb for finding min embedding dimension and LLE for Lorenz model.
